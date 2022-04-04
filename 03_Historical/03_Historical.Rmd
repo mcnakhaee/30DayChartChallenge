@@ -1,0 +1,197 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(ggtext)
+library(ggfx)
+library(showtext)
+library(here)
+library(glue)
+library(janitor)
+showtext_auto()
+font_add_google("Montserrat", "Montserrat")
+font <- 'Montserrat'
+```
+
+Apparantly, there is an option for downloading the data into csv etc but actually it doesn't give me what I see in the tables. So,
+I had to copy and paste into an excel myself. 
+```{r}
+borrowd_1 <- read_csv(here('03_Historical','data','dutch_borrowed_words_1.csv')) %>% 
+     clean_names()
+borrowd_2 <- read_csv(here('03_Historical','data','dutch_borrowed_words_2.csv')) %>% 
+     clean_names()
+```
+
+```{r}
+borrowd_words <- borrowd_1 %>% 
+  inner_join(borrowd_2,by=c('word_form'='borrowed_words')) 
+```
+
+
+```{r fig.height=15,fig.width=15}
+
+data <- borrowd_words %>%
+  distinct(word_form, .keep_all = TRUE) %>%
+  mutate(
+    donor_languoid_short = case_when(
+      str_detect(donor_languoid, 'German') ~ 'German',
+      str_detect(donor_languoid, 'French') ~ 'French',
+      TRUE ~ donor_languoid
+    ),
+    symbol = case_when(
+      str_detect(donor_languoid, 'Low German') ~ '*',
+      str_detect(donor_languoid, 'Picard') ~ '^',
+      TRUE ~ ""
+    )
+    
+  ) %>%
+  add_count(donor_languoid_short, sort = TRUE) %>%
+  mutate(donor_languoid_short = fct_lump(donor_languoid_short, n = 8)) %>%
+  arrange(desc(donor_languoid_short),
+          desc(word_form),-desc(donor_languoid)) %>%
+  group_by(donor_languoid_short) %>%
+  mutate(y = row_number() * 2) %>%
+  ungroup()
+
+
+data %>%
+  ggplot() +
+  geom_text(
+    aes(
+      x = fct_reorder(donor_languoid_short, n),
+      y = y,
+      label = paste(word_form, symbol),
+      color = borrowed_status
+    ),
+    size = 3.5,
+    hjust = 0.5,
+    family = font,
+    #   color = 'grey40'
+    
+  ) +
+  annotate(
+    'segment',
+    x = 0.6,
+    xend = 1.4,
+    y = -1.4,
+    yend = -1.4,
+    size = 2,
+    color = 'grey40',
+    fill =  'grey40'
+  ) +
+  annotate(
+    'segment',
+    x = 1.6,
+    xend = 2.4,
+    y = -1.4,
+    yend = -1.4,
+    size = 2,
+    color = 'grey40',
+    fill =  'grey40'
+  ) +
+  annotate(
+    'segment',
+    x = 2.6,
+    xend = 3.4,
+    y = -1.4,
+    yend = -1.4,
+    size = 2,
+    color = 'grey40',
+    fill =  'grey40'
+  ) +
+  annotate(
+    'segment',
+    x = 3.6,
+    xend = 4.4,
+    y = -1.4,
+    yend = -1.4,
+    size = 2,
+    color = 'grey40',
+    fill =  'grey40'
+  ) +
+  annotate(
+    'segment',
+    x = 4.6,
+    xend = 5.4,
+    y = -1.4,
+    yend = -1.4,
+    size = 2,
+    color = 'grey40',
+    fill =  'grey40'
+  ) +
+  annotate(
+    'segment',
+    x = 5.6,
+    xend = 6.4,
+    y = -1.4,
+    yend = -1.4,
+    size = 2,
+    color = 'grey40',
+    fill =  'grey40'
+  ) +
+  annotate(
+    'segment',
+    x = 6.6,
+    xend = 7.4,
+    y = -1.4,
+    yend = -1.4,
+    size = 2,
+    color = 'grey40',
+    fill =  'grey40'
+  ) +
+  annotate(
+    'segment',
+    x = 7.6,
+    xend = 8.4,
+    y = -1.4,
+    yend = -1.4,
+    size = 2,
+    color = 'grey40',
+    fill =  'grey40'
+  ) +
+  annotate(
+    'segment',
+    x = 8.6,
+    xend = 9.4,
+    y = -1.4,
+    yend = -1.4,
+    size = 2,
+    color = 'grey40',
+    fill =  'grey40'
+  ) +
+  
+  geom_text(
+    aes(
+      x = fct_reorder(donor_languoid_short, n),
+      y = -4.4,
+      label = donor_languoid_short ,
+      color = donor_languoid_short
+    ),
+    family = font,
+    color = 'grey40'
+  ) +
+  
+  scale_color_manual(values = c('grey35', '#ef476f')) +
+  theme_void(base_family = font) +
+  theme(
+    plot.title.position = 'plot',
+    plot.title = element_text(
+      hjust = 0.5,
+      size = 16,
+      margin = margin(40, 0,-40, 0)
+    ),
+    plot.background = element_rect(fill = "grey99", colour = "grey15"),
+    plot.margin = margin(0, 0, 0, 0),
+    legend.position = 'none'
+  )   
+
+```
+
+```{r}
+ggsave("03_Historical.pdf", width = 15, height = 15, device = cairo_pdf)
+```
+
+
