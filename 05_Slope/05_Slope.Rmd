@@ -14,9 +14,9 @@ library(showtext)
 showtext_auto()
 font_add_google("Karla", "Karla")
 font <- 'Karla'
-bkgrnd <- "#fef9ef"
+bkgrnd <- "#219ebc"
 fgrnd <- "#617a89"
-rect_col <- "#f7ede2"
+grid_col <- '#8ecae6'
 
 ```
 ```{r}
@@ -27,8 +27,10 @@ theme_update(
   plot.margin = margin(25, 50, 25, 50),
   panel.spacing.x = unit(0.8, "lines"),
   panel.spacing.y = unit(1, "lines"),
-  panel.grid.minor.y  = element_line(color = 'grey83',
+  panel.grid.minor.y  = element_line(color = grid_col,
                                      size = 0.2),
+      strip.text = element_text(margin = margin(b = 3),color = 'grey96', size = 7.1),
+
   
 )
 ```
@@ -80,13 +82,22 @@ world_countries_grid1_temp <- world_countries_grid1 %>%
   mutate(name_wrapped = str_wrap(name,width = 10))
 ```
 
+```{r}
+world_happiness_2019_2022_summary <- world_happiness_2019_2022_wide %>% 
+  mutate(name = if_else(name == "Bosnia & Herzegovina" , "Bosnia",name)) %>% 
+  filter(name %in% world_countries_grid1$name,
+         !str_detect(name,'Isr')) %>% 
+  summarise(avg_2019 = mean(year_2019),
+            avg_2022 = mean(year_2022))
+
+```
+
 
 ```{r fig.height=20, fig.width=20, message=FALSE, warning=FALSE}
 
 
 
 main_p <- world_happiness_2019_2022_wide %>%
-  
   ggplot() +
   geom_segment(
     aes(
@@ -102,51 +113,29 @@ main_p <- world_happiness_2019_2022_wide %>%
   
   facet_geo(vars(name), grid = world_countries_grid1_temp, label = 'name_wrapped') +
   coord_cartesian(clip = "off", expand = FALSE) +
-  scale_color_manual(values = c("#17c3b2", "#f28482"),
+  scale_color_manual(values = c("#ffb703", "#f28482"),
                      guide = F) +
-  scale_y_continuous(limits = c(2.3, 8)) +
-  theme_void() +
-  theme(
-    text = element_text(family = 'Karla'),
-    plot.background = element_rect(fill = bkgrnd, color = NA),
-    plot.margin = margin(25, 50, 25, 50),
-    panel.spacing.x = unit(0.8, "lines"),
-    panel.spacing.y = unit(1, "lines"),
-    strip.text = element_text(margin = margin(b = 3), size = 7.1),
-    panel.grid.minor.y  = element_line(color = 'grey92',
-                                       size = 0.2)
-  )
-
+  scale_y_continuous(limits = c(2.3, 8)) 
 
 main_p
 ```
 ```{r}
-main_p + ggsave("05_Slope.pdf", width = 20, height = 20, device = cairo_pdf)
+ggsave("05_Slope.pdf", width = 20, height = 20, device = cairo_pdf)
 ```
 
 
 ```{r,fig.height=3,fig.width=3}
-world_happiness_2019_2022_summary <- world_happiness_2019_2022_wide %>% 
-  rename(name = country_name) %>%   
-  mutate(name = if_else(name == "Bosnia & Herzegovina" , "Bosnia",name)) %>% 
-  filter(name %in% world_countries_grid1$name,
-         !str_detect(name,'Isr')) %>% 
-  summarise(avg_2019 = mean(year_2019),
-            avg_2022 = mean(year_2022))
 
 
 summary_p <- world_happiness_2019_2022_summary %>% 
   ggplot() +
     geom_segment(aes(x = 0, xend = 1, y = avg_2019, yend = avg_2022, color = ifelse(avg_2022-avg_2019 > 0, "happier", "sadder")),
                  arrow = arrow(length = unit(0.3, "cm")), size = 1.6) +
-
-
-  #facet_geo(vars(name),grid = world_countries_grid1_t,label = 'name_wrapped')+
-  annotate('text',x = 1.5,y = world_happiness_2019_2022_summary$avg_2022,label = '2022',family = 'Karla') +
-  annotate('text',x = -0.5,y = world_happiness_2019_2022_summary$avg_2019,label = '2019',family = 'Karla') +
+  annotate('text',x = 1.5,y = world_happiness_2019_2022_summary$avg_2022,label = '2022',family = 'Karla',color = 'grey95') +
+  annotate('text',x = -0.5,y = world_happiness_2019_2022_summary$avg_2019,label = '2019',family = 'Karla',color = 'grey95') +
   coord_cartesian(clip = "off", expand = FALSE) +
       scale_color_manual(
-      values = c("#17c3b2","#f28482"),
+      values = c("#ffb703","#f28482"),
       guide = F
     )+
   scale_y_continuous(limits = c(2.3,8)) 
@@ -157,7 +146,7 @@ summary_p
 
 
 ```{r}
-summary_p + ggsave("05_Slope_global.pdf", width = 3, height = 3, device = cairo_pdf)
+ggsave("05_Slope_global.pdf", width = 3, height = 3, device = cairo_pdf)
 ```
 
 
@@ -167,4 +156,3 @@ world_happiness_2019_2022_wide %>%
   mutate(diff = year_2022 - year_2019) %>% 
   arrange(diff) %>% View()
 ```
-
