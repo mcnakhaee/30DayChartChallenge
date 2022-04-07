@@ -10,12 +10,27 @@ library(geofacet)
 library(here)
 library(glue)
 library(showtext)
-library(hrbrthemes)
-library(janitor)
-library(patchwork)
+
 showtext_auto()
 font_add_google("Karla", "Karla")
 font <- 'Karla'
+bkgrnd <- "#fef9ef"
+fgrnd <- "#617a89"
+rect_col <- "#f7ede2"
+
+```
+```{r}
+theme_set(theme_void())
+theme_update(
+  text = element_text(family = font),
+  plot.background = element_rect(fill = bkgrnd, color = NA),
+  plot.margin = margin(25, 50, 25, 50),
+  panel.spacing.x = unit(0.8, "lines"),
+  panel.spacing.y = unit(1, "lines"),
+  panel.grid.minor.y  = element_line(color = 'grey83',
+                                     size = 0.2),
+  
+)
 ```
 
 ```{r}
@@ -27,12 +42,6 @@ wh_2019 <- read.csv(here::here('05_Slope','data','2019.csv')) %>%
   mutate(ladder_score= as.numeric(ladder_score)) %>% 
   mutate(country_name= str_remove(country_name,fixed('*')))
 
-wh_2020 <- read.csv(here::here('05_Slope','data','2020.csv')) %>% 
-  clean_names()%>% 
-  mutate(year = 2020)%>% 
-  select(country_name,year,ladder_score )%>%
-  mutate(ladder_score= as.numeric(ladder_score)) %>% 
-  mutate(country_name= str_remove(country_name,fixed('*')))
 wh_2022 <- read.csv(here::here('05_Slope','data','World Happiness Report 2022.csv'))%>% 
   clean_names() %>% 
   mutate(year = 2022)%>% 
@@ -44,86 +53,18 @@ wh_2022 <- read.csv(here::here('05_Slope','data','World Happiness Report 2022.cs
 ```
 
 ```{r}
-
-world_happiness_2020_2022 <- bind_rows(wh_2020,wh_2022)
-
 world_happiness_2019_2022 <- bind_rows(wh_2019,wh_2022)
-
-
-
 world_happiness_2019_2022_wide <- world_happiness_2019_2022 %>% 
   pivot_wider(names_from = 'year',values_from = 'ladder_score',names_prefix = 'year_')
-
-
 world_happiness_2019_2022_wide <- world_happiness_2019_2022_wide %>% 
-  filter(!is.na(year_2019)&!is.na(year_2022))
+  filter(!is.na(year_2019)&!is.na(year_2022)) %>% 
+      rename(name = country_name) %>%
+    mutate(name = if_else(name == "Bosnia & Herzegovina" , "Bosnia", name))
 ```
+
 
 ```{r}
-world_happiness_2020_2022_wide <- world_happiness_2020_2022 %>% 
-  pivot_wider(names_from = 'year',values_from = 'ladder_score',names_prefix = 'year_')
-
-
-world_happiness_2020_2022_wide <- world_happiness_2020_2022_wide %>% 
-  filter(!is.na(year_2020)&!is.na(year_2022))
-
-```
-
-```{r fig.height=20, fig.width=20, message=FALSE, warning=FALSE}
-
-world_countries_grid1 <- world_countries_grid1 %>% 
-  mutate(name = case_when(name == 'United States of America' ~'United States',
-                  name == 'Iran (Islamic Republic of)'~'Iran',
-         name == 'Great Britain and Northern Ireland' ~ 'United Kingdom',
-         name == 'Russian Federation' ~ "Russia" ,
-         name == 'Viet Nam' ~ "Vietnam",
-         name == "Côte d'Ivoire" ~ 'Ivory Coast' ,
-         name == "Lao People's Democratic Republic" ~'Laos',
-         name == "Moldova (Republic of)" ~ "Moldova" ,
-         name == "Bosnia & Herzegovina" ~  "Bosnia and Herzegovina",
-         TRUE ~ name)) %>% 
-  filter(name %in% world_happiness_2020_2022_wide$country_name )
-
-  bkgrnd <- "#FEF9EA"
-  fgrnd <- "#617a89"
-  grid_col <- axis_col <- "grey80"
-
-world_happiness_2020_2022_wide %>% 
-  rename(name = country_name) %>% 
-  filter(name %in% world_countries_grid1$name,
-         !str_detect(name,'Isr')) %>% 
-  ggplot() +
-    geom_segment(aes(x = 0, xend = 1, y = year_2020, yend = year_2022, color = ifelse(year_2022-year_2020 > 0, "happier", "sadder")), arrow = arrow(length = unit(0.2, "cm")), size = 0.75) +
-  facet_geo(vars(name),grid = world_countries_grid1)+
-  coord_cartesian(clip = "off", expand = FALSE) +
-      scale_color_manual(
-      values = c("#17c3b2","#fe6d73"),
-      guide = F
-    )+
-  scale_y_continuous(limits = c(2.3,8)) +
-  #coord_equal(ratio = 1.2) +
-    theme_void() +
-  theme(
-    text = element_text(family = 'Karla'),
-    #legend.position = "none",
-    plot.background = element_rect(fill = bkgrnd, color = NA),
-    #panel.border = element_rect(color = 'grey80'),
-    plot.margin = margin(20, 30, 15, 30),
-    panel.spacing.x = unit(1.5, "lines"),
-    panel.spacing.y = unit(1, "lines"),
-    strip.text = element_text(margin = margin(b=10)),
-    panel.grid.minor.y  = element_line(color = grid_col, 
-      size = 0.1)
-    #plot.title = element_text(size = 16, family = f1b, hjust = 0.5, margin = margin(10, 0, 0, 0)),
-    #plot.subtitle = element_text(size = 14, family = f1, hjust = 0.5, margin = margin(5, 0, 25, 0)),
-    #plot.caption = element_text(family = f1, hjust = 1, margin = margin(20, 0, 0, 0))
-  ) 
-
-```
-
-```{r fig.height=20, fig.width=20, message=FALSE, warning=FALSE}
-
-world_countries_grid1_t <- world_countries_grid1 %>% 
+world_countries_grid1_temp <- world_countries_grid1 %>% 
   mutate(name = case_when(name == 'United States of America' ~'United States',
                   name == 'Iran (Islamic Republic of)'~'Iran',
          name == 'Great Britain and Northern Ireland' ~ 'United Kingdom',
@@ -134,49 +75,47 @@ world_countries_grid1_t <- world_countries_grid1 %>%
          name == "Moldova (Republic of)" ~ "Moldova" ,
          name == "Bosnia & Herzegovina" ~  "Bosnia",
          TRUE ~ name)) %>% 
-  filter(name %in% world_happiness_2019_2022_wide$country_name,
+  filter(name %in% world_happiness_2019_2022_wide$name,
          !str_detect(name,'Isr')) %>% 
   mutate(name_wrapped = str_wrap(name,width = 10))
+```
 
-  bkgrnd <- "#fef9ef"
-  fgrnd <- "#617a89"
-  grid_col <- axis_col <- "#fef9ef"
-  rect_col <- "#f7ede2"
 
-  main_p <- world_happiness_2019_2022_wide %>%
-    rename(name = country_name) %>%
-    mutate(name = if_else(name == "Bosnia & Herzegovina" , "Bosnia", name)) %>%
-    
-    ggplot() +
-    geom_segment(
-      aes(
-        x = 0,
-        xend = 1,
-        y = year_2019,
-        yend = year_2022,
-        color = ifelse(year_2022 - year_2019 > 0, "happier", "sadder")
-      ),
-      arrow = arrow(length = unit(0.3, "cm")),
-      size = 1.6
-    ) +
-    
-    #geom_text(aes(x = 0.5,y = 7.9,label = round(year_2022-year_2019,2 )),size = 4,color = 'grey77') +
-    facet_geo(vars(name), grid = world_countries_grid1_t, label = 'name_wrapped') +
-    coord_cartesian(clip = "off", expand = FALSE) +
-    scale_color_manual(values = c("#17c3b2", "#f28482"),
-                       guide = F) +
-    scale_y_continuous(limits = c(2.3, 8)) +
-    theme_void() +
-    theme(
-      text = element_text(family = 'Karla'),
-      plot.background = element_rect(fill = bkgrnd, color = NA),
-      plot.margin = margin(25, 50, 25, 50),
-      panel.spacing.x = unit(0.8, "lines"),
-      panel.spacing.y = unit(1, "lines"),
-      strip.text = element_text(margin = margin(b = 3), size = 7.1),
-      panel.grid.minor.y  = element_line(color = 'grey92',
-                                         size = 0.2)
-    ) 
+```{r fig.height=20, fig.width=20, message=FALSE, warning=FALSE}
+
+
+
+main_p <- world_happiness_2019_2022_wide %>%
+  
+  ggplot() +
+  geom_segment(
+    aes(
+      x = 0,
+      xend = 1,
+      y = year_2019,
+      yend = year_2022,
+      color = ifelse(year_2022 - year_2019 > 0, "happier", "sadder")
+    ),
+    arrow = arrow(length = unit(0.3, "cm")),
+    size = 1.6
+  ) +
+  
+  facet_geo(vars(name), grid = world_countries_grid1_temp, label = 'name_wrapped') +
+  coord_cartesian(clip = "off", expand = FALSE) +
+  scale_color_manual(values = c("#17c3b2", "#f28482"),
+                     guide = F) +
+  scale_y_continuous(limits = c(2.3, 8)) +
+  theme_void() +
+  theme(
+    text = element_text(family = 'Karla'),
+    plot.background = element_rect(fill = bkgrnd, color = NA),
+    plot.margin = margin(25, 50, 25, 50),
+    panel.spacing.x = unit(0.8, "lines"),
+    panel.spacing.y = unit(1, "lines"),
+    strip.text = element_text(margin = margin(b = 3), size = 7.1),
+    panel.grid.minor.y  = element_line(color = 'grey92',
+                                       size = 0.2)
+  )
 
 
 main_p
@@ -210,20 +149,7 @@ summary_p <- world_happiness_2019_2022_summary %>%
       values = c("#17c3b2","#f28482"),
       guide = F
     )+
-  scale_y_continuous(limits = c(2.3,8)) +
-    theme_void() +
-  theme(
-    text = element_text(family = 'Karla'),
-    #legend.position = "none",
-    plot.background = element_rect(fill = bkgrnd, color = NA),
-    #panel.border = element_rect(color = 'grey80'),
-    #panel.background = element_rect(fill = rect_col, color = NA),
-    plot.margin = margin(25, 50, 25, 50),
-    panel.spacing.x = unit(0.8, "lines"),
-    panel.spacing.y = unit(1, "lines"),
-    panel.grid.minor.y  = element_line(color = 'grey83',
-      size = 0.2),
-  ) 
+  scale_y_continuous(limits = c(2.3,8)) 
 
 
 summary_p
@@ -233,3 +159,12 @@ summary_p
 ```{r}
 summary_p + ggsave("05_Slope_global.pdf", width = 3, height = 3, device = cairo_pdf)
 ```
+
+
+
+```{r}
+world_happiness_2019_2022_wide %>% 
+  mutate(diff = year_2022 - year_2019) %>% 
+  arrange(diff) %>% View()
+```
+
