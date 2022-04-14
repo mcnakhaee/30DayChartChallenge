@@ -1,0 +1,201 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(owidR)
+library(janitor)
+library(tidyverse)
+library(ggalt)
+library(showtext)
+library(glue)
+library(ggtext)
+library(gganimate)
+library(ggrepel)
+library(gghighlight)
+
+showtext::showtext_auto()
+font_add_google("Karla", "Karla")
+font <- 'Karla'
+
+
+theme_set(theme_minimal(base_family = font))
+
+theme_update(
+  plot.margin = margin(25, 15, 15, 25),
+  plot.background = element_rect(color = "#ffffff", fill = "#ffffff"),
+  panel.grid.major.x = element_line(color = "grey95", size = 0.6),
+  panel.grid.major.y = element_blank(),
+  panel.grid.minor = element_blank(),
+  axis.text = element_text(family = font),
+  axis.text.x = element_text(
+    color = "grey40",
+    size = 15,
+    margin = margin(t = 10, b = 10)
+  ),
+  
+  axis.text.y = element_blank(),
+  axis.title = element_blank(),
+  axis.ticks = element_blank(),
+  plot.title = element_markdown(
+    family = font,
+    face = "bold",
+    size = 26.45
+  ),
+  plot.subtitle = element_textbox_simple(
+    family = font,
+    color = "grey40",
+    size = 18.8,
+    lineheight = 1.3,
+    margin = margin(t = 10, b = 30)
+  ),
+  plot.caption = element_text(
+    family = font,
+    color = "grey55",
+    size = 15.5,
+    margin = margin(t = 20, b = 0, r = 15)
+  )
+)
+```
+
+```{r}
+marriage <-
+  read_csv(here::here('06_OWID', 'data', 'marriage-rate-per-1000-inhabitants.csv')) %>%
+  clean_names()
+marriage <- marriage %>%
+  filter(
+    !str_detect(entity, 'Island'),!entity %in% c(
+      'Pitcairn',
+      'Maldives',
+      'Anguilla',
+      'Bermuda',
+      'Gibraltar',
+      'Antigua and Barbuda'
+    ),
+    year > 1960
+  ) %>%
+  add_count(entity) %>%
+  filter(n > 10) %>%
+  select(-n)
+divorce <-
+  read_csv(here::here('06_OWID', 'data', 'divorces-per-1000-people.csv')) %>%
+  clean_names()
+divorce <- divorce %>%
+  filter(
+    !str_detect(entity, 'Island'),!entity %in% c(
+      'Pitcairn',
+      'Maldives',
+      'Anguilla',
+      'Bermuda',
+      'Gibraltar',
+      'Antigua and Barbuda'
+    ),
+    year > 1960
+  ) %>%
+  add_count(entity) %>%
+  filter(n > 5) %>%
+  select(-n)
+```
+```{r}
+marriage_divorce <- marriage %>%
+  inner_join(divorce, by = c('entity', 'year', 'code')) %>%
+  filter(!str_detect(entity, 'Isr'))
+
+
+
+marriage_divorce_2016 <- marriage_divorce %>%
+  filter(year == 2016)
+
+
+
+marriage_divorce_summary <- marriage_divorce %>%
+  filter(entity %in% marriage_divorce_2016$entity) %>%
+  group_by(entity) %>%
+  summarise(
+    min_marriage_rate = min(crude_marriage_rate_per_1_000_inhabitants),
+    max_divorce_rate = max(crude_divorce_rate_per_1_000_inhabitants)
+  ) %>%
+  inner_join(marriage_divorce_2016, by = 'entity')
+
+```
+
+
+```{r,fig.height=15,fig.width=21}
+
+
+
+
+marriage_divorce_summary %>%
+  ggplot(mapping = aes(y =  fct_reorder(
+    entity, crude_marriage_rate_per_1_000_inhabitants
+  ))) +
+  geom_segment(
+    aes(
+      x = crude_marriage_rate_per_1_000_inhabitants,
+      xend = crude_divorce_rate_per_1_000_inhabitants,
+      yend = fct_reorder(entity, crude_marriage_rate_per_1_000_inhabitants)
+    ),
+    size  = 3,
+    color = '#8d99ae',
+    alpha = 0.25,
+    linetype = "11"
+  )  +
+  geom_text(
+    aes(x = crude_divorce_rate_per_1_000_inhabitants, label = entity),
+    nudge_x = -0.2,
+    hjust = 1,
+    family = font,
+    size = 5.3
+  ) +
+  geom_point(
+    aes(x = crude_marriage_rate_per_1_000_inhabitants),
+    size = 7,
+    fill = "#0081a7",
+    color = "#0081a7",
+    shape = 21,
+    stroke = 0.5,
+    alpha = 0.8
+  ) +
+  geom_point(
+    aes(x = crude_divorce_rate_per_1_000_inhabitants),
+    size = 7,
+    fill = "#f07167",
+    color = "#f07167",
+    shape = 21,
+    stroke = 0.5
+  )  +
+geom_point(
+    aes(x = min_marriage_rate),
+    size = 7,
+    fill = "#0081a7",
+    color = "#0081a7",
+    shape = 21,
+    stroke = 0.5,
+    alpha = 0.3
+  ) +
+  geom_point(
+    aes(x = max_divorce_rate),
+    size = 7,
+    fill = "#fed9b7",
+    color = "#fed9b7",
+    shape = 21,
+    stroke = 0.5
+  )  +
+  
+  labs(
+    title = "<i style='color:#f07167'>Divorce</i> and <i style='color:#0081a7'>Marriage</i> Rate per 1000 People in 2016 ",
+    subtitle = "The rate of marriage is in decline in many parts of the world. This graph compares the rate of marriage and divorce in a select list of countries around the world.
+ Also, <i style='color:#f4a261'>the maximum rate of divorce</i> and <i style='color:#0081a7'>the minimum rate of marriage</i> are shown to provide a baseline.",
+ caption = 'Data: Our World in Date | Visualization: Muhammad Chenariyan Nakhaee @mcnakhaee'
+  ) +
+  
+  scale_x_continuous(sec.axis = dup_axis(), limits = c(0, 10))
+
+  
+```
+```{r}
+ggsave("06_OWID.pdf",  height = 15,width = 21, device = cairo_pdf)
+
+```
+
