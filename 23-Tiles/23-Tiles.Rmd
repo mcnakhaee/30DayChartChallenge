@@ -5,11 +5,9 @@ output: html_notebook
 
 ```{r}
 library(tidyverse)
-library(ggfx)
 library(ggtext)
 #library(geofacet)
 library(showtext)
-library(patchwork)
 
 showtext_auto()
 font_add_google("Nunito", "Nunito")
