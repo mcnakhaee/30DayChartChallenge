@@ -6,7 +6,6 @@ output: html_notebook
 ```{r}
 library(tidyverse)
 library(ggtext)
-library(ggfx)
 library(showtext)
 library(here)
 library(glue)
@@ -15,7 +14,7 @@ showtext_auto()
 font_add_google("Montserrat", "Montserrat")
 font <- 'Montserrat'
 ```
-
+https://wold.clld.org
 Apparantly, there is an option for downloading the data into csv etc but actually it doesn't give me what I see in the tables. So,
 I had to copy and paste into an excel myself. 
 ```{r}
@@ -31,7 +30,7 @@ borrowd_words <- borrowd_1 %>%
 ```
 
 
-```{r fig.height=15,fig.width=15}
+```{r fig.height=15,fig.width=20}
 
 data <- borrowd_words %>%
   distinct(word_form, .keep_all = TRUE) %>%
@@ -45,7 +44,9 @@ data <- borrowd_words %>%
       str_detect(donor_languoid, 'Low German') ~ '*',
       str_detect(donor_languoid, 'Picard') ~ '^',
       TRUE ~ ""
-    )
+    ),
+    meaning = str_remove(meaning,'the'),
+    word_form_source = paste(glue("<i style='color:#fb8500'>{word_form}</i>"),'/',source_word,symbol)
     
   ) %>%
   add_count(donor_languoid_short, sort = TRUE) %>%
@@ -59,17 +60,18 @@ data <- borrowd_words %>%
 
 data %>%
   ggplot() +
-  geom_text(
+  geom_richtext(
     aes(
       x = fct_reorder(donor_languoid_short, n),
       y = y,
-      label = paste(word_form, symbol),
+      label = paste(word_form_source),
       color = borrowed_status
     ),
     size = 3.5,
     hjust = 0.5,
     family = font,
-    #   color = 'grey40'
+    fill = NA,
+    label.color = NA
     
   ) +
   annotate(
@@ -191,7 +193,8 @@ data %>%
 ```
 
 ```{r}
-ggsave("03_Historical.pdf", width = 15, height = 15, device = cairo_pdf)
+
+ggsave("03_Historical_with_source_word.pdf", width = 20, height = 15, device = cairo_pdf)
 ```
 
 
